@@ -25,10 +25,7 @@
  *       thumb2 ../wolfssl/wolfcrypt/src/port/arm/thumb2-aes-asm.c
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 
 #ifdef WOLFSSL_ARMASM
@@ -214,6 +211,11 @@ void AES_invert_key(unsigned char* ks, word32 rounds)
     register word32* L_AES_Thumb2_td_c __asm__ ("r3") =
         (word32*)L_AES_Thumb2_td;
 
+#else
+    register word32* L_AES_Thumb2_te_c = (word32*)L_AES_Thumb2_te;
+
+    register word32* L_AES_Thumb2_td_c = (word32*)L_AES_Thumb2_td;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -227,8 +229,8 @@ void AES_invert_key(unsigned char* ks, word32 rounds)
 #else
     "L_AES_invert_key_loop_%=:\n\t"
 #endif
-        "ldm   %[ks], {r2, r3, r4, r5}\n\t"
-        "ldm   r10, {r6, r7, r8, r9}\n\t"
+        "LDM	%[ks], {r2, r3, r4, r5}\n\t"
+        "LDM	r10, {r6, r7, r8, r9}\n\t"
         "STM	r10, {r2, r3, r4, r5}\n\t"
         "STM	%[ks]!, {r6, r7, r8, r9}\n\t"
         "SUBS	r11, r11, #0x2\n\t"
@@ -249,7 +251,7 @@ void AES_invert_key(unsigned char* ks, word32 rounds)
 #else
     "L_AES_invert_key_mix_loop_%=:\n\t"
 #endif
-        "ldm   %[ks], {r2, r3, r4, r5}\n\t"
+        "LDM	%[ks], {r2, r3, r4, r5}\n\t"
         "UBFX	r6, r2, #0, #8\n\t"
         "UBFX	r7, r2, #8, #8\n\t"
         "UBFX	r8, r2, #16, #8\n\t"
@@ -359,6 +361,11 @@ void AES_set_encrypt_key(const unsigned char* key, word32 len,
     register word32* L_AES_Thumb2_rcon_c __asm__ ("r4") =
         (word32*)&L_AES_Thumb2_rcon;
 
+#else
+    register word32* L_AES_Thumb2_te_c = (word32*)L_AES_Thumb2_te;
+
+    register word32* L_AES_Thumb2_rcon_c = (word32*)&L_AES_Thumb2_rcon;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -417,9 +424,9 @@ void AES_set_encrypt_key(const unsigned char* key, word32 len,
         "EOR	r3, r7, r4, LSL #8\n\t"
         "EOR	r3, r3, r5, LSL #16\n\t"
         "EOR	r3, r3, r6, LSL #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7}\n\t"
         "EOR	r4, r4, r3\n\t"
-        "ldm   lr!, {r3}\n\t"
+        "LDM	lr!, {r3}\n\t"
         "EOR	r4, r4, r3\n\t"
         "EOR	r5, r5, r4\n\t"
         "EOR	r6, r6, r5\n\t"
@@ -439,7 +446,7 @@ void AES_set_encrypt_key(const unsigned char* key, word32 len,
         "EOR	r3, r3, r4, LSL #8\n\t"
         "EOR	r3, r3, r5, LSL #16\n\t"
         "EOR	r3, r3, r6, LSL #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7}\n\t"
         "EOR	r4, r4, r3\n\t"
         "EOR	r5, r5, r4\n\t"
         "EOR	r6, r6, r5\n\t"
@@ -466,9 +473,9 @@ void AES_set_encrypt_key(const unsigned char* key, word32 len,
         "EOR	r3, r7, r4, LSL #8\n\t"
         "EOR	r3, r3, r5, LSL #16\n\t"
         "EOR	r3, r3, r6, LSL #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7}\n\t"
         "EOR	r4, r4, r3\n\t"
-        "ldm   lr!, {r3}\n\t"
+        "LDM	lr!, {r3}\n\t"
         "EOR	r4, r4, r3\n\t"
         "EOR	r5, r5, r4\n\t"
         "EOR	r6, r6, r5\n\t"
@@ -522,9 +529,9 @@ void AES_set_encrypt_key(const unsigned char* key, word32 len,
         "EOR	r3, r9, r4, LSL #8\n\t"
         "EOR	r3, r3, r5, LSL #16\n\t"
         "EOR	r3, r3, r6, LSL #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7, r8, r9}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7, r8, r9}\n\t"
         "EOR	r4, r4, r3\n\t"
-        "ldm   lr!, {r3}\n\t"
+        "LDM	lr!, {r3}\n\t"
         "EOR	r4, r4, r3\n\t"
         "EOR	r5, r5, r4\n\t"
         "EOR	r6, r6, r5\n\t"
@@ -551,9 +558,9 @@ void AES_set_encrypt_key(const unsigned char* key, word32 len,
         "EOR	r3, r9, r4, LSL #8\n\t"
         "EOR	r3, r3, r5, LSL #16\n\t"
         "EOR	r3, r3, r6, LSL #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7, r8, r9}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7, r8, r9}\n\t"
         "EOR	r4, r4, r3\n\t"
-        "ldm   lr!, {r3}\n\t"
+        "LDM	lr!, {r3}\n\t"
         "EOR	r4, r4, r3\n\t"
         "EOR	r5, r5, r4\n\t"
         "EOR	r6, r6, r5\n\t"
@@ -599,9 +606,9 @@ void AES_set_encrypt_key(const unsigned char* key, word32 len,
         "EOR	r3, r7, r4, LSL #8\n\t"
         "EOR	r3, r3, r5, LSL #16\n\t"
         "EOR	r3, r3, r6, LSL #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7}\n\t"
         "EOR	r4, r4, r3\n\t"
-        "ldm   lr!, {r3}\n\t"
+        "LDM	lr!, {r3}\n\t"
         "EOR	r4, r4, r3\n\t"
         "EOR	r5, r5, r4\n\t"
         "EOR	r6, r6, r5\n\t"
@@ -693,7 +700,7 @@ void AES_encrypt_block(const word32* te, int nr, int len, const word32* ks)
         "LDR	r11, [%[te], r11, LSL #2]\n\t"
         "LDR	r2, [%[te], r2, LSL #2]\n\t"
         "EOR	lr, lr, r6, ROR #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7}\n\t"
         "EOR	r11, r11, lr, ROR #24\n\t"
         "EOR	r11, r11, r2, ROR #8\n\t"
         /*   XOR in Key Schedule */
@@ -743,7 +750,7 @@ void AES_encrypt_block(const word32* te, int nr, int len, const word32* ks)
         "LDR	r7, [%[te], r7, LSL #2]\n\t"
         "LDR	r2, [%[te], r2, LSL #2]\n\t"
         "EOR	lr, lr, r10, ROR #24\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "EOR	r7, r7, lr, ROR #24\n\t"
         "EOR	r7, r7, r2, ROR #8\n\t"
         /*   XOR in Key Schedule */
@@ -801,7 +808,7 @@ void AES_encrypt_block(const word32* te, int nr, int len, const word32* ks)
         "LDR	r11, [%[te], r11, LSL #2]\n\t"
         "LDR	r2, [%[te], r2, LSL #2]\n\t"
         "EOR	lr, lr, r6, ROR #24\n\t"
-        "ldm   %[ks]!, {r4, r5, r6, r7}\n\t"
+        "LDM	%[ks]!, {r4, r5, r6, r7}\n\t"
         "EOR	r11, r11, lr, ROR #24\n\t"
         "EOR	r11, r11, r2, ROR #8\n\t"
         /*   XOR in Key Schedule */
@@ -851,7 +858,7 @@ void AES_encrypt_block(const word32* te, int nr, int len, const word32* ks)
         "LDRB	lr, [%[te], lr, LSL #2]\n\t"
         "LDRB	r2, [%[te], r2, LSL #2]\n\t"
         "EOR	lr, lr, r11, LSL #16\n\t"
-        "ldm   %[ks], {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks], {r8, r9, r10, r11}\n\t"
         "EOR	r7, r7, lr, LSL #8\n\t"
         "EOR	r7, r7, r2, LSL #16\n\t"
         /*   XOR in Key Schedule */
@@ -893,6 +900,9 @@ void AES_ECB_encrypt(const unsigned char* in, unsigned char* out,
     register word32* L_AES_Thumb2_te_ecb_c __asm__ ("r5") =
         (word32*)L_AES_Thumb2_te_ecb;
 
+#else
+    register word32* L_AES_Thumb2_te_ecb_c = (word32*)L_AES_Thumb2_te_ecb;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -901,7 +911,7 @@ void AES_ECB_encrypt(const unsigned char* in, unsigned char* out,
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r12, r4\n\t"
 #else
-        "LDR	r12, [sp, #36]\n\t"
+        "MOV	r12, %[nr]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
         "PUSH	{%[ks]}\n\t"
         "CMP	r12, #0xa\n\t"
@@ -935,7 +945,7 @@ void AES_ECB_encrypt(const unsigned char* in, unsigned char* out,
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
         "PUSH	{r1, %[len], lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -991,7 +1001,7 @@ void AES_ECB_encrypt(const unsigned char* in, unsigned char* out,
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
         "PUSH	{r1, %[len], lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -1047,7 +1057,7 @@ void AES_ECB_encrypt(const unsigned char* in, unsigned char* out,
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
         "PUSH	{r1, %[len], lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -1115,22 +1125,25 @@ void AES_CBC_encrypt(const unsigned char* in, unsigned char* out,
     register word32* L_AES_Thumb2_te_ecb_c __asm__ ("r6") =
         (word32*)L_AES_Thumb2_te_ecb;
 
+#else
+    register word32* L_AES_Thumb2_te_ecb_c = (word32*)L_AES_Thumb2_te_ecb;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r8, r4\n\t"
 #else
-        "LDR	r8, [sp, #36]\n\t"
+        "MOV	r8, %[nr]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r9, r5\n\t"
 #else
-        "LDR	r9, [sp, #40]\n\t"
+        "MOV	r9, %[iv]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
         "MOV	lr, %[in]\n\t"
         "MOV	r0, %[L_AES_Thumb2_te_ecb]\n\t"
-        "ldm   r9, {r4, r5, r6, r7}\n\t"
+        "LDM	r9, {r4, r5, r6, r7}\n\t"
         "PUSH	{%[ks], r9}\n\t"
         "CMP	r8, #0xa\n\t"
 #if defined(__GNUC__)
@@ -1163,7 +1176,7 @@ void AES_CBC_encrypt(const unsigned char* in, unsigned char* out,
         "EOR	r6, r6, r10\n\t"
         "EOR	r7, r7, r11\n\t"
         "PUSH	{r1, %[len], lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -1223,7 +1236,7 @@ void AES_CBC_encrypt(const unsigned char* in, unsigned char* out,
         "EOR	r6, r6, r10\n\t"
         "EOR	r7, r7, r11\n\t"
         "PUSH	{r1, %[len], lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -1283,7 +1296,7 @@ void AES_CBC_encrypt(const unsigned char* in, unsigned char* out,
         "EOR	r6, r6, r10\n\t"
         "EOR	r7, r7, r11\n\t"
         "PUSH	{r1, %[len], lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -1356,22 +1369,25 @@ void AES_CTR_encrypt(const unsigned char* in, unsigned char* out,
     register word32* L_AES_Thumb2_te_ecb_c __asm__ ("r6") =
         (word32*)L_AES_Thumb2_te_ecb;
 
+#else
+    register word32* L_AES_Thumb2_te_ecb_c = (word32*)L_AES_Thumb2_te_ecb;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r12, r4\n\t"
 #else
-        "LDR	r12, [sp, #36]\n\t"
+        "MOV	r12, %[nr]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r8, r5\n\t"
 #else
-        "LDR	r8, [sp, #40]\n\t"
+        "MOV	r8, %[ctr]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
         "MOV	lr, %[in]\n\t"
         "MOV	r0, %[L_AES_Thumb2_te_ecb]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -1407,7 +1423,7 @@ void AES_CTR_encrypt(const unsigned char* in, unsigned char* out,
         "ADCS	r9, r5, #0x0\n\t"
         "ADC	r8, r4, #0x0\n\t"
         "STM	lr, {r8, r9, r10, r11}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -1434,7 +1450,7 @@ void AES_CTR_encrypt(const unsigned char* in, unsigned char* out,
         "STR	r5, [%[out], #4]\n\t"
         "STR	r6, [%[out], #8]\n\t"
         "STR	r7, [%[out], #12]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "SUBS	%[len], %[len], #0x10\n\t"
         "ADD	lr, lr, #0x10\n\t"
         "ADD	%[out], %[out], #0x10\n\t"
@@ -1471,7 +1487,7 @@ void AES_CTR_encrypt(const unsigned char* in, unsigned char* out,
         "ADCS	r9, r5, #0x0\n\t"
         "ADC	r8, r4, #0x0\n\t"
         "STM	lr, {r8, r9, r10, r11}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -1498,7 +1514,7 @@ void AES_CTR_encrypt(const unsigned char* in, unsigned char* out,
         "STR	r5, [%[out], #4]\n\t"
         "STR	r6, [%[out], #8]\n\t"
         "STR	r7, [%[out], #12]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "SUBS	%[len], %[len], #0x10\n\t"
         "ADD	lr, lr, #0x10\n\t"
         "ADD	%[out], %[out], #0x10\n\t"
@@ -1535,7 +1551,7 @@ void AES_CTR_encrypt(const unsigned char* in, unsigned char* out,
         "ADCS	r9, r5, #0x0\n\t"
         "ADC	r8, r4, #0x0\n\t"
         "STM	lr, {r8, r9, r10, r11}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -1562,7 +1578,7 @@ void AES_CTR_encrypt(const unsigned char* in, unsigned char* out,
         "STR	r5, [%[out], #4]\n\t"
         "STR	r6, [%[out], #8]\n\t"
         "STR	r7, [%[out], #12]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "SUBS	%[len], %[len], #0x10\n\t"
         "ADD	lr, lr, #0x10\n\t"
         "ADD	%[out], %[out], #0x10\n\t"
@@ -1659,7 +1675,7 @@ void AES_decrypt_block(const word32* td, int nr, const byte* td4)
         "LDR	r11, [%[td], r11, LSL #2]\n\t"
         "LDR	lr, [%[td], lr, LSL #2]\n\t"
         "EOR	r12, r12, r4, ROR #24\n\t"
-        "ldm   r3!, {r4, r5, r6, r7}\n\t"
+        "LDM	r3!, {r4, r5, r6, r7}\n\t"
         "EOR	r11, r11, lr, ROR #8\n\t"
         "EOR	r11, r11, r12, ROR #24\n\t"
         /*   XOR in Key Schedule */
@@ -1709,7 +1725,7 @@ void AES_decrypt_block(const word32* td, int nr, const byte* td4)
         "LDR	r7, [%[td], r7, LSL #2]\n\t"
         "LDR	lr, [%[td], lr, LSL #2]\n\t"
         "EOR	r12, r12, r8, ROR #24\n\t"
-        "ldm   r3!, {r8, r9, r10, r11}\n\t"
+        "LDM	r3!, {r8, r9, r10, r11}\n\t"
         "EOR	r7, r7, lr, ROR #8\n\t"
         "EOR	r7, r7, r12, ROR #24\n\t"
         /*   XOR in Key Schedule */
@@ -1767,7 +1783,7 @@ void AES_decrypt_block(const word32* td, int nr, const byte* td4)
         "LDR	r11, [%[td], r11, LSL #2]\n\t"
         "LDR	lr, [%[td], lr, LSL #2]\n\t"
         "EOR	r12, r12, r4, ROR #24\n\t"
-        "ldm   r3!, {r4, r5, r6, r7}\n\t"
+        "LDM	r3!, {r4, r5, r6, r7}\n\t"
         "EOR	r11, r11, lr, ROR #8\n\t"
         "EOR	r11, r11, r12, ROR #24\n\t"
         /*   XOR in Key Schedule */
@@ -1817,7 +1833,7 @@ void AES_decrypt_block(const word32* td, int nr, const byte* td4)
         "LDRB	r7, [%[td4], r7]\n\t"
         "LDRB	lr, [%[td4], lr]\n\t"
         "EOR	r12, r12, r11, LSL #16\n\t"
-        "ldm   r3, {r8, r9, r10, r11}\n\t"
+        "LDM	r3, {r8, r9, r10, r11}\n\t"
         "EOR	r7, r7, r12, LSL #8\n\t"
         "EOR	r7, r7, lr, LSL #16\n\t"
         /*   XOR in Key Schedule */
@@ -1892,13 +1908,18 @@ void AES_ECB_decrypt(const unsigned char* in, unsigned char* out,
     register byte* L_AES_Thumb2_td4_c __asm__ ("r6") =
         (byte*)&L_AES_Thumb2_td4;
 
+#else
+    register word32* L_AES_Thumb2_td_ecb_c = (word32*)L_AES_Thumb2_td_ecb;
+
+    register byte* L_AES_Thumb2_td4_c = (byte*)&L_AES_Thumb2_td4;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r8, r4\n\t"
 #else
-        "LDR	r8, [sp, #36]\n\t"
+        "MOV	r8, %[nr]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
         "MOV	lr, %[in]\n\t"
         "MOV	r0, %[L_AES_Thumb2_td_ecb]\n\t"
@@ -1935,7 +1956,7 @@ void AES_ECB_decrypt(const unsigned char* in, unsigned char* out,
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
         "PUSH	{r1, %[ks], r12, lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -1990,7 +2011,7 @@ void AES_ECB_decrypt(const unsigned char* in, unsigned char* out,
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
         "PUSH	{r1, %[ks], r12, lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -2045,7 +2066,7 @@ void AES_ECB_decrypt(const unsigned char* in, unsigned char* out,
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
         "PUSH	{r1, %[ks], r12, lr}\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
         "EOR	r5, r5, r9\n\t"
@@ -2114,23 +2135,28 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
     register byte* L_AES_Thumb2_td4_c __asm__ ("r7") =
         (byte*)&L_AES_Thumb2_td4;
 
+#else
+    register word32* L_AES_Thumb2_td_ecb_c = (word32*)L_AES_Thumb2_td_ecb;
+
+    register byte* L_AES_Thumb2_td4_c = (byte*)&L_AES_Thumb2_td4;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
-#ifndef WOLFSSL_NO_VAR_ASSIGN_REG
-        "MOV	r8, r4\n\t"
-#else
-        "LDR	r8, [sp, #36]\n\t"
-#endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
-#ifndef WOLFSSL_NO_VAR_ASSIGN_REG
-        "MOV	r4, r5\n\t"
-#else
-        "LDR	r4, [sp, #40]\n\t"
-#endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
         "MOV	lr, %[in]\n\t"
         "MOV	r0, %[L_AES_Thumb2_td_ecb]\n\t"
         "MOV	r12, %[len]\n\t"
         "MOV	r2, %[L_AES_Thumb2_td4]\n\t"
+#ifndef WOLFSSL_NO_VAR_ASSIGN_REG
+        "MOV	r8, r4\n\t"
+#else
+        "MOV	r8, %[nr]\n\t"
+#endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
+#ifndef WOLFSSL_NO_VAR_ASSIGN_REG
+        "MOV	r4, r5\n\t"
+#else
+        "MOV	r4, %[iv]\n\t"
+#endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
         "PUSH	{%[ks], r4}\n\t"
         "CMP	r8, #0xa\n\t"
 #if defined(__GNUC__)
@@ -2162,7 +2188,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "LDR	lr, [sp, #16]\n\t"
         "STRD	r4, r5, [lr, #16]\n\t"
         "STRD	r6, r7, [lr, #24]\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -2179,7 +2205,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
-        "ldm   lr, {r8, r9, r10, r11}\n\t"
+        "LDM	lr, {r8, r9, r10, r11}\n\t"
         "POP	{r1, r12, lr}\n\t"
         "LDR	%[ks], [sp]\n\t"
         "EOR	r4, r4, r8\n\t"
@@ -2208,7 +2234,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "LDR	lr, [sp, #16]\n\t"
         "STRD	r4, r5, [lr]\n\t"
         "STRD	r6, r7, [lr, #8]\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -2268,7 +2294,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "LDR	lr, [sp, #16]\n\t"
         "STRD	r4, r5, [lr, #16]\n\t"
         "STRD	r6, r7, [lr, #24]\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -2285,7 +2311,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
-        "ldm   lr, {r8, r9, r10, r11}\n\t"
+        "LDM	lr, {r8, r9, r10, r11}\n\t"
         "POP	{r1, r12, lr}\n\t"
         "LDR	%[ks], [sp]\n\t"
         "EOR	r4, r4, r8\n\t"
@@ -2314,7 +2340,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "LDR	lr, [sp, #16]\n\t"
         "STRD	r4, r5, [lr]\n\t"
         "STRD	r6, r7, [lr, #8]\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -2374,7 +2400,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "LDR	lr, [sp, #16]\n\t"
         "STRD	r4, r5, [lr, #16]\n\t"
         "STRD	r6, r7, [lr, #24]\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -2391,7 +2417,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
         "REV	r7, r7\n\t"
-        "ldm   lr, {r8, r9, r10, r11}\n\t"
+        "LDM	lr, {r8, r9, r10, r11}\n\t"
         "POP	{r1, r12, lr}\n\t"
         "LDR	%[ks], [sp]\n\t"
         "EOR	r4, r4, r8\n\t"
@@ -2420,7 +2446,7 @@ void AES_CBC_decrypt(const unsigned char* in, unsigned char* out,
         "LDR	lr, [sp, #16]\n\t"
         "STRD	r4, r5, [lr]\n\t"
         "STRD	r6, r7, [lr, #8]\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -2524,6 +2550,9 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
     register word32* L_GCM_gmult_len_r_c __asm__ ("r4") =
         (word32*)&L_GCM_gmult_len_r;
 
+#else
+    register word32* L_GCM_gmult_len_r_c = (word32*)&L_GCM_gmult_len_r;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -2541,7 +2570,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "LSR	%[len], r12, #24\n\t"
         "AND	%[len], %[len], #0xf\n\t"
         "ADD	%[len], %[m], %[len], LSL #4\n\t"
-        "ldm   %[len], {r8, r9, r10, r11}\n\t"
+        "LDM	%[len], {r8, r9, r10, r11}\n\t"
         "LSR	r6, r10, #4\n\t"
         "AND	%[len], r11, #0xf\n\t"
         "LSR	r11, r11, #4\n\t"
@@ -2551,7 +2580,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2568,7 +2597,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2585,7 +2614,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2602,7 +2631,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2619,7 +2648,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2635,7 +2664,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2652,7 +2681,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2674,7 +2703,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "LSR	%[len], r12, #24\n\t"
         "AND	%[len], %[len], #0xf\n\t"
         "ADD	%[len], %[m], %[len], LSL #4\n\t"
-        "ldm   %[len], {r4, r5, r6, r7}\n\t"
+        "LDM	%[len], {r4, r5, r6, r7}\n\t"
         "EOR	r8, r8, r4\n\t"
         "EOR	r9, r9, r5\n\t"
         "EOR	r10, r10, r6\n\t"
@@ -2688,7 +2717,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2705,7 +2734,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2722,7 +2751,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2739,7 +2768,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2756,7 +2785,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2772,7 +2801,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2789,7 +2818,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2811,7 +2840,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "LSR	%[len], r12, #24\n\t"
         "AND	%[len], %[len], #0xf\n\t"
         "ADD	%[len], %[m], %[len], LSL #4\n\t"
-        "ldm   %[len], {r4, r5, r6, r7}\n\t"
+        "LDM	%[len], {r4, r5, r6, r7}\n\t"
         "EOR	r8, r8, r4\n\t"
         "EOR	r9, r9, r5\n\t"
         "EOR	r10, r10, r6\n\t"
@@ -2825,7 +2854,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2842,7 +2871,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2859,7 +2888,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2876,7 +2905,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2893,7 +2922,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2909,7 +2938,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2926,7 +2955,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2948,7 +2977,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "LSR	%[len], r12, #24\n\t"
         "AND	%[len], %[len], #0xf\n\t"
         "ADD	%[len], %[m], %[len], LSL #4\n\t"
-        "ldm   %[len], {r4, r5, r6, r7}\n\t"
+        "LDM	%[len], {r4, r5, r6, r7}\n\t"
         "EOR	r8, r8, r4\n\t"
         "EOR	r9, r9, r5\n\t"
         "EOR	r10, r10, r6\n\t"
@@ -2962,7 +2991,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2979,7 +3008,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -2996,7 +3025,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -3013,7 +3042,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -3030,7 +3059,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -3046,7 +3075,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -3063,7 +3092,7 @@ void GCM_gmult_len(unsigned char* x, const unsigned char** m,
         "ADD	r4, %[m], r4, LSL #4\n\t"
         "EOR	r10, r6, r9, LSL #28\n\t"
         "LSR	r9, r9, #4\n\t"
-        "ldm   r4, {r4, r5, r6, r7}\n\t"
+        "LDM	r4, {r4, r5, r6, r7}\n\t"
         "EOR	r9, r9, r8, LSL #28\n\t"
         "EOR	r8, %[len], r8, LSR #4\n\t"
         "EOR	r8, r8, r4\n\t"
@@ -3117,22 +3146,25 @@ void AES_GCM_encrypt(const unsigned char* in, unsigned char* out,
     register word32* L_AES_Thumb2_te_gcm_c __asm__ ("r6") =
         (word32*)L_AES_Thumb2_te_gcm;
 
+#else
+    register word32* L_AES_Thumb2_te_gcm_c = (word32*)L_AES_Thumb2_te_gcm;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r12, r4\n\t"
 #else
-        "LDR	r12, [sp, #36]\n\t"
+        "MOV	r12, %[nr]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
         "MOV	r8, r5\n\t"
 #else
-        "LDR	r8, [sp, #40]\n\t"
+        "MOV	r8, %[ctr]\n\t"
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
         "MOV	lr, %[in]\n\t"
         "MOV	r0, %[L_AES_Thumb2_te_gcm]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "REV	r4, r4\n\t"
         "REV	r5, r5\n\t"
         "REV	r6, r6\n\t"
@@ -3164,7 +3196,7 @@ void AES_GCM_encrypt(const unsigned char* in, unsigned char* out,
         "PUSH	{r1, %[len], lr}\n\t"
         "LDR	lr, [sp, #16]\n\t"
         "ADD	r7, r7, #0x1\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "STR	r7, [lr, #12]\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
@@ -3192,7 +3224,7 @@ void AES_GCM_encrypt(const unsigned char* in, unsigned char* out,
         "STR	r5, [%[out], #4]\n\t"
         "STR	r6, [%[out], #8]\n\t"
         "STR	r7, [%[out], #12]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "SUBS	%[len], %[len], #0x10\n\t"
         "ADD	lr, lr, #0x10\n\t"
         "ADD	%[out], %[out], #0x10\n\t"
@@ -3225,7 +3257,7 @@ void AES_GCM_encrypt(const unsigned char* in, unsigned char* out,
         "PUSH	{r1, %[len], lr}\n\t"
         "LDR	lr, [sp, #16]\n\t"
         "ADD	r7, r7, #0x1\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "STR	r7, [lr, #12]\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
@@ -3253,7 +3285,7 @@ void AES_GCM_encrypt(const unsigned char* in, unsigned char* out,
         "STR	r5, [%[out], #4]\n\t"
         "STR	r6, [%[out], #8]\n\t"
         "STR	r7, [%[out], #12]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "SUBS	%[len], %[len], #0x10\n\t"
         "ADD	lr, lr, #0x10\n\t"
         "ADD	%[out], %[out], #0x10\n\t"
@@ -3286,7 +3318,7 @@ void AES_GCM_encrypt(const unsigned char* in, unsigned char* out,
         "PUSH	{r1, %[len], lr}\n\t"
         "LDR	lr, [sp, #16]\n\t"
         "ADD	r7, r7, #0x1\n\t"
-        "ldm   %[ks]!, {r8, r9, r10, r11}\n\t"
+        "LDM	%[ks]!, {r8, r9, r10, r11}\n\t"
         "STR	r7, [lr, #12]\n\t"
         /* Round: 0 - XOR in key schedule */
         "EOR	r4, r4, r8\n\t"
@@ -3314,7 +3346,7 @@ void AES_GCM_encrypt(const unsigned char* in, unsigned char* out,
         "STR	r5, [%[out], #4]\n\t"
         "STR	r6, [%[out], #8]\n\t"
         "STR	r7, [%[out], #12]\n\t"
-        "ldm   r8, {r4, r5, r6, r7}\n\t"
+        "LDM	r8, {r4, r5, r6, r7}\n\t"
         "SUBS	%[len], %[len], #0x10\n\t"
         "ADD	lr, lr, #0x10\n\t"
         "ADD	%[out], %[out], #0x10\n\t"

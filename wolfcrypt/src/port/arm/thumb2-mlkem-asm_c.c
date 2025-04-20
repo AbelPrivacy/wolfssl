@@ -25,10 +25,7 @@
  *       thumb2 ../wolfssl/wolfcrypt/src/port/arm/thumb2-mlkem-asm.c
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 
 #ifdef WOLFSSL_ARMASM
@@ -75,6 +72,10 @@ void mlkem_thumb2_ntt(sword16* r)
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
     register sword16* r __asm__ ("r0") = (sword16*)r_p;
     register word16* L_mlkem_thumb2_ntt_zetas_c __asm__ ("r1") =
+        (word16*)&L_mlkem_thumb2_ntt_zetas;
+
+#else
+    register word16* L_mlkem_thumb2_ntt_zetas_c =
         (word16*)&L_mlkem_thumb2_ntt_zetas;
 
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
@@ -1394,6 +1395,10 @@ void mlkem_thumb2_invntt(sword16* r)
 #ifndef WOLFSSL_NO_VAR_ASSIGN_REG
     register sword16* r __asm__ ("r0") = (sword16*)r_p;
     register word16* L_mlkem_invntt_zetas_inv_c __asm__ ("r1") =
+        (word16*)&L_mlkem_invntt_zetas_inv;
+
+#else
+    register word16* L_mlkem_invntt_zetas_inv_c =
         (word16*)&L_mlkem_invntt_zetas_inv;
 
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
@@ -3085,6 +3090,10 @@ void mlkem_thumb2_basemul_mont(sword16* r, const sword16* a, const sword16* b)
     register word16* L_mlkem_basemul_mont_zetas_c __asm__ ("r3") =
         (word16*)&L_mlkem_basemul_mont_zetas;
 
+#else
+    register word16* L_mlkem_basemul_mont_zetas_c =
+        (word16*)&L_mlkem_basemul_mont_zetas;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -3101,8 +3110,8 @@ void mlkem_thumb2_basemul_mont(sword16* r, const sword16* a, const sword16* b)
 #else
     "L_mlkem_basemul_mont_loop_%=:\n\t"
 #endif
-        "ldm   %[a]!, {r4, r5}\n\t"
-        "ldm   %[b]!, {r6, r7}\n\t"
+        "LDM	%[a]!, {r4, r5}\n\t"
+        "LDM	%[b]!, {r6, r7}\n\t"
         "LDR	lr, [r3, r8]\n\t"
         "ADD	r8, r8, #0x2\n\t"
         "PUSH	{r8}\n\t"
@@ -3232,6 +3241,10 @@ void mlkem_thumb2_basemul_mont_add(sword16* r, const sword16* a,
     register word16* L_mlkem_basemul_mont_zetas_c __asm__ ("r3") =
         (word16*)&L_mlkem_basemul_mont_zetas;
 
+#else
+    register word16* L_mlkem_basemul_mont_zetas_c =
+        (word16*)&L_mlkem_basemul_mont_zetas;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -3248,8 +3261,8 @@ void mlkem_thumb2_basemul_mont_add(sword16* r, const sword16* a,
 #else
     "L_mlkem_thumb2_basemul_mont_add_loop_%=:\n\t"
 #endif
-        "ldm   %[a]!, {r4, r5}\n\t"
-        "ldm   %[b]!, {r6, r7}\n\t"
+        "LDM	%[a]!, {r4, r5}\n\t"
+        "LDM	%[b]!, {r6, r7}\n\t"
         "LDR	lr, [r3, r8]\n\t"
         "ADD	r8, r8, #0x2\n\t"
         "PUSH	{r8}\n\t"
@@ -3278,7 +3291,7 @@ void mlkem_thumb2_basemul_mont_add(sword16* r, const sword16* a,
         "SMULTB	r7, r12, r11\n\t"
         "SMLABB	r9, r12, r6, r9\n\t"
         "SMLABB	r11, r12, r7, r11\n\t"
-        "ldm   %[r], {r4, r5}\n\t"
+        "LDM	%[r], {r4, r5}\n\t"
         "PKHTB	r9, r9, r8, ASR #16\n\t"
         "PKHTB	r11, r11, r10, ASR #16\n\t"
         "SADD16	r4, r4, r9\n\t"
@@ -3345,7 +3358,7 @@ void mlkem_thumb2_basemul_mont_add(sword16* r, const sword16* a,
         "SBFX	r5, r7, #0, #16\n\t"
         "MLA	r9, r12, r4, r9\n\t"
         "MLA	r11, r12, r5, r11\n\t"
-        "ldm   %[r], {r4, r5}\n\t"
+        "LDM	%[r], {r4, r5}\n\t"
         "BFC	r9, #0, #16\n\t"
         "BFC	r11, #0, #16\n\t"
         "ORR	r9, r9, r8, LSR #16\n\t"
@@ -3387,6 +3400,10 @@ void mlkem_thumb2_csubq(sword16* p)
     register word16* L_mlkem_basemul_mont_zetas_c __asm__ ("r1") =
         (word16*)&L_mlkem_basemul_mont_zetas;
 
+#else
+    register word16* L_mlkem_basemul_mont_zetas_c =
+        (word16*)&L_mlkem_basemul_mont_zetas;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -3404,7 +3421,7 @@ void mlkem_thumb2_csubq(sword16* p)
 #else
     "L_mlkem_thumb2_csubq_loop_%=:\n\t"
 #endif
-        "ldm   %[p], {r2, r3, r4, r5}\n\t"
+        "LDM	%[p], {r2, r3, r4, r5}\n\t"
 #ifndef WOLFSSL_ARM_ARCH_7M
         "SSUB16	r2, r2, r12\n\t"
         "SSUB16	r3, r3, r12\n\t"
@@ -3501,6 +3518,10 @@ unsigned int mlkem_thumb2_rej_uniform(sword16* p, unsigned int len,
     register word16* L_mlkem_basemul_mont_zetas_c __asm__ ("r4") =
         (word16*)&L_mlkem_basemul_mont_zetas;
 
+#else
+    register word16* L_mlkem_basemul_mont_zetas_c =
+        (word16*)&L_mlkem_basemul_mont_zetas;
+
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 
     __asm__ __volatile__ (
@@ -3520,7 +3541,7 @@ unsigned int mlkem_thumb2_rej_uniform(sword16* p, unsigned int len,
 #else
         "BLT.N	L_mlkem_thumb2_rej_uniform_done_no_fail_%=\n\t"
 #endif
-        "ldm   %[r]!, {r4, r5, r6}\n\t"
+        "LDM	%[r]!, {r4, r5, r6}\n\t"
         "UBFX	r7, r4, #0, #12\n\t"
         "STRH	r7, [%[p], r9]\n\t"
         "SUB	r10, r7, r8\n\t"
@@ -3606,7 +3627,7 @@ unsigned int mlkem_thumb2_rej_uniform(sword16* p, unsigned int len,
 #else
     "L_mlkem_thumb2_rej_uniform_loop_%=:\n\t"
 #endif
-        "ldm   %[r]!, {r4, r5, r6}\n\t"
+        "LDM	%[r]!, {r4, r5, r6}\n\t"
         "UBFX	r7, r4, #0, #12\n\t"
         "CMP	r7, r8\n\t"
 #if defined(__GNUC__)

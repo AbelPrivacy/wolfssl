@@ -25,10 +25,7 @@
  *       thumb2 ../wolfssl/wolfcrypt/src/port/arm/thumb2-sha256-asm.c
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 
 #ifdef WOLFSSL_ARMASM
@@ -79,6 +76,10 @@ void Transform_Sha256_Len(wc_Sha256* sha256, const byte* data, word32 len)
     register const byte* data __asm__ ("r1") = (const byte*)data_p;
     register word32 len __asm__ ("r2") = (word32)len_p;
     register word32* L_SHA256_transform_len_k_c __asm__ ("r3") =
+        (word32*)&L_SHA256_transform_len_k;
+
+#else
+    register word32* L_SHA256_transform_len_k_c =
         (word32*)&L_SHA256_transform_len_k;
 
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */

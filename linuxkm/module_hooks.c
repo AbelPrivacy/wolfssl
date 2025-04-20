@@ -27,16 +27,10 @@
 #endif
 #endif
 
-#define FIPS_NO_WRAPPERS
+#define WOLFSSL_LINUXKM_NEED_LINUX_CURRENT
 
-#define WOLFSSL_NEED_LINUX_CURRENT
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
 #ifdef WOLFCRYPT_ONLY
     #include <wolfssl/version.h>
 #else
@@ -45,7 +39,7 @@
 #ifdef HAVE_FIPS
     #include <wolfssl/wolfcrypt/fips_test.h>
 #endif
-#ifndef NO_CRYPT_TEST
+#if !defined(NO_CRYPT_TEST) || defined(LINUXKM_LKCAPI_REGISTER)
     #include <wolfcrypt/test/test.h>
 #endif
 #include <wolfssl/wolfcrypt/random.h>
@@ -650,8 +644,8 @@ extern const unsigned int wolfCrypt_FIPS_ro_end[];
 #define FIPS_IN_CORE_KEY_SZ 32
 #define FIPS_IN_CORE_VERIFY_SZ FIPS_IN_CORE_KEY_SZ
 typedef int (*fips_address_function)(void);
-#define MAX_FIPS_DATA_SZ  100000
-#define MAX_FIPS_CODE_SZ 1000000
+#define MAX_FIPS_DATA_SZ 10000000
+#define MAX_FIPS_CODE_SZ 10000000
 extern int GenBase16_Hash(const byte* in, int length, char* out, int outSz);
 
 static int updateFipsHash(void)
@@ -759,6 +753,8 @@ static int updateFipsHash(void)
         goto out;
     }
 
+    WC_SANITIZE_DISABLE();
+
     ret = crypto_shash_update(desc, (byte *)(wc_ptr_t)first, (word32)code_sz);
     if (ret) {
         pr_err("crypto_shash_update failed: err %d\n", ret);
@@ -784,6 +780,8 @@ static int updateFipsHash(void)
         ret = BAD_STATE_E;
         goto out;
     }
+
+    WC_SANITIZE_ENABLE();
 
     ret = crypto_shash_final(desc, hash);
     if (ret) {

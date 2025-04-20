@@ -25,10 +25,7 @@
  *       thumb2 ../wolfssl/wolfcrypt/src/port/arm/thumb2-sha3-asm.c
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 
 #ifdef WOLFSSL_ARMASM
@@ -72,6 +69,9 @@ void BlockSha3(word64* state)
     register word64* state __asm__ ("r0") = (word64*)state_p;
     register word64* L_sha3_thumb2_rt_c __asm__ ("r1") =
         (word64*)&L_sha3_thumb2_rt;
+
+#else
+    register word64* L_sha3_thumb2_rt_c = (word64*)&L_sha3_thumb2_rt;
 
 #endif /* !WOLFSSL_NO_VAR_ASSIGN_REG */
 

@@ -1,11 +1,11 @@
 # configure.ac
 #
-# Copyright (C) 2006-2024 wolfSSL Inc.
+# Copyright (C) 2006-2025 wolfSSL Inc.
 #
 # This file is part of wolfSSL. (formerly known as CyaSSL)
 #
 #
-AC_COPYRIGHT([Copyright (C) 2006-2024 wolfSSL Inc.])
+AC_COPYRIGHT([Copyright (C) 2006-2025 wolfSSL Inc.])
 AC_PREREQ([2.69])
 AC_INIT([wolfssl],[5.7.6],[https://github.com/wolfssl/wolfssl/issues],[wolfssl],[https://www.wolfssl.com])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -177,6 +177,11 @@ OPTIMIZE_HUGE_CFLAGS="-funroll-loops -DTFM_SMALL_SET -DTFM_HUGE_SET"
 DEBUG_CFLAGS="-g -DDEBUG -DDEBUG_WOLFSSL"
 LIB_ADD=
 LIB_STATIC_ADD=
+
+OPTIMIZE_CFLAGS="$OPTIMIZE_CFLAGS $EXTRA_OPTS_CFLAGS"
+OPTIMIZE_FAST_CFLAGS="$OPTIMIZE_FAST_CFLAGS $EXTRA_OPTS_CFLAGS"
+OPTIMIZE_HUGE_CFLAGS="$OPTIMIZE_HUGE_CFLAGS $EXTRA_OPTS_CFLAGS"
+DEBUG_VFLAGS="$DEBUG_VFLAGS $EXTRA_OPTS_CFLAGS"
 
 if test "$output_objdir" = ""
 then
@@ -498,7 +503,16 @@ AS_CASE([$ENABLED_FIPS],
     [v5-dev],[
         FIPS_VERSION="v5-dev"
         HAVE_FIPS_VERSION_MAJOR=5
+        HAVE_FIPS_VERSION_MINOR=2
+        HAVE_FIPS_VERSION_PATCH=1
+        ENABLED_FIPS="yes"
+        # for dev, DEF_SP_MATH and DEF_FAST_MATH follow non-FIPS defaults (currently sp-math-all)
+    ],
+    [v5-kcapi],[
+        FIPS_VERSION="v5-dev"
+        HAVE_FIPS_VERSION_MAJOR=5
         HAVE_FIPS_VERSION_MINOR=3
+        HAVE_FIPS_VERSION_PATCH=0
         ENABLED_FIPS="yes"
         # for dev, DEF_SP_MATH and DEF_FAST_MATH follow non-FIPS defaults (currently sp-math-all)
     ],
@@ -678,7 +692,7 @@ AC_SUBST([ENABLED_LINUXKM_BENCHMARKS])
 
 if test "$ENABLED_LINUXKM_DEFAULTS" = "yes"
 then
-    AM_CFLAGS="$AM_CFLAGS -DWOLFSSL_DH_CONST -DWOLFSSL_SP_MOD_WORD_RP -DWOLFSSL_SP_DIV_64 -DWOLFSSL_SP_DIV_WORD_HALF -DWOLFSSL_SMALL_STACK_STATIC -DWOLFSSL_TEST_SUBROUTINE=static"
+    AM_CFLAGS="$AM_CFLAGS -DWOLFSSL_DH_CONST -DWOLFSSL_SP_MOD_WORD_RP -DWOLFSSL_SP_DIV_64 -DWOLFSSL_SP_DIV_WORD_HALF -DWOLFSSL_SMALL_STACK_STATIC"
     if test "$ENABLED_LINUXKM_PIE" = "yes"; then
         AM_CFLAGS="$AM_CFLAGS -DWOLFSSL_NO_OCSP_ISSUER_CHECK"
     fi
@@ -1243,7 +1257,6 @@ then
     test "$enable_aesgcm" = "" && enable_aesgcm=yes
     test "$enable_aesccm" = "" && enable_aesccm=yes
     test "$enable_aesctr" = "" && enable_aesctr=yes
-    test "$enable_aeseax" = "" && enable_aeseax=yes
     test "$enable_aesofb" = "" && enable_aesofb=yes
     test "$enable_aescfb" = "" && enable_aescfb=yes
     test "$enable_aescbc_length_checks" = "" && enable_aescbc_length_checks=yes
@@ -1318,6 +1331,8 @@ then
         test "$enable_ed25519_stream" = "" && test "$enable_ed25519" != "no" && enable_ed25519_stream=yes
         test "$enable_ed448" = "" && enable_ed448=yes
         test "$enable_ed448_stream" = "" && test "$enable_ed448" != "no" && enable_ed448_stream=yes
+        test "$enable_aessiv" = "" && enable_aessiv=yes
+        test "$enable_aeseax" = "" && enable_aeseax=yes
 
         if test "$ENABLED_LINUXKM_DEFAULTS" != "yes"
         then
@@ -1331,7 +1346,6 @@ then
         test "$enable_aesgcm_stream" = "" && test "$enable_aesgcm" = "yes" && enable_aesgcm_stream=yes
         test "$enable_aesxts" = "" && enable_aesxts=yes
         test "$enable_aesxts_stream" = "" && test "$enable_aesxts" = "yes" && enable_aesxts_stream=yes
-        test "$enable_aessiv" = "" && enable_aessiv=yes
         test "$enable_shake128" = "" && enable_shake128=yes
         test "$enable_shake256" = "" && enable_shake256=yes
         test "$enable_compkey" = "" && test "$ENABLED_LINUXKM_DEFAULTS" != "yes" && enable_compkey=yes
@@ -2239,6 +2253,7 @@ if test "$ENABLED_OPENSSH" = "yes"
 then
     ENABLED_FORTRESS="yes"
     AM_CFLAGS="$AM_CFLAGS -DWOLFSSL_OPENSSH -DHAVE_EX_DATA -DWOLFSSL_BASE16"
+    AM_CFLAGS="$AM_CFLAGS -DWOLFSSL_ERROR_CODE_OPENSSL"
 fi
 
 # net-snmp Build
@@ -2511,6 +2526,30 @@ if test "$ENABLED_FAULTHARDEN" = "yes"
 then
     AM_CFLAGS="$AM_CFLAGS -DWOLFSSL_CHECK_SIG_FAULTS -DWOLFSSL_CHECK_VER_FAULTS"
 fi
+
+AC_ARG_ENABLE([compileharden],
+    [AS_HELP_STRING([--enable-compileharden],[Enable extra hardening compile flags (default: disabled)])],
+    [ENABLED_COMPILEHARDEN=$enableval],
+    [ENABLED_COMPILEHARDEN=no])
+
+EXTRA_OPTS_CFLAGS=
+if test "$ENABLED_COMPILEHARDEN" = "yes"
+then
+    CAN_USE_32B_BOUNDARIES_FLAG=no
+    AX_CHECK_COMPILE_FLAG([-Wa,-mbranches-within-32B-boundaries],
+        [CAN_USE_32B_BOUNDARIES_FLAG=yes],
+        [CAN_USE_32B_BOUNDARIES_FLAG=no],
+        [-Werror],[])
+
+    if test "$CAN_USE_32B_BOUNDARIES_FLAG" = "yes"
+    then
+        EXTRA_OPTS_CFLAGS="$EXTRA_OPTS_CFLAGS -Wa,-mbranches-within-32B-boundaries -falign-loops=64"
+    else
+        AC_MSG_ERROR([compiler does not accept -mbranches-within-32B-boundaries flag])
+    fi
+fi
+
+
 
 # IPv6 Test Apps
 AC_ARG_ENABLE([ipv6],
@@ -3507,6 +3546,13 @@ AC_ARG_ENABLE([aesni],
     [ ENABLED_AESNI=no ]
     )
 
+# INTEL AES-NI with AVX
+AC_ARG_ENABLE([aesni-with-avx],
+    [AS_HELP_STRING([--enable-aesni-with-avx],[Enable AES-NI with additional AVX acceleration for AES (default: disabled)])],
+    [ ENABLED_AESNI_WITH_AVX=$enableval ],
+    [ ENABLED_AESNI_WITH_AVX=no ]
+    )
+
 # INTEL ASM
 AC_ARG_ENABLE([intelasm],
     [AS_HELP_STRING([--enable-intelasm],[Enable All Intel ASM speedups (default: disabled)])],
@@ -3519,6 +3565,17 @@ then
     if test "$ENABLED_AESNI" = "small"
     then
         AM_CFLAGS="$AM_CFLAGS -DAES_GCM_AESNI_NO_UNROLL"
+        ENABLED_AESNI=yes
+    fi
+
+    if test "$ENABLED_INTELASM" = "yes"
+    then
+        AM_CFLAGS="$AM_CFLAGS -DUSE_INTEL_SPEEDUP"
+        ENABLED_AESNI=yes
+        ENABLED_AESNI_WITH_AVX=yes
+    elif test "$ENABLED_AESNI_WITH_AVX" = "yes"
+    then
+        AM_CFLAGS="$AM_CFLAGS -DUSE_INTEL_SPEEDUP_FOR_AES"
         ENABLED_AESNI=yes
     fi
 
@@ -3545,12 +3602,6 @@ then
         fi
         AS_IF([test "x$ENABLED_AESGCM" != "xno"],[AM_CCASFLAGS="$AM_CCASFLAGS -DHAVE_AESGCM"])
         AS_IF([test "x$ENABLED_SM3" != "xno"],[AM_CCASFLAGS="$AM_CCASFLAGS -DWOLFSSL_SM3"])
-    fi
-
-    if test "$ENABLED_INTELASM" = "yes"
-    then
-        AM_CFLAGS="$AM_CFLAGS -DUSE_INTEL_SPEEDUP"
-        ENABLED_AESNI=yes
     fi
 
     if test "$host_cpu" = "x86_64" || test "$host_cpu" = "amd64"
@@ -4271,7 +4322,8 @@ fi
 
 if test "$ENABLED_ECC" != "no"
 then
-    AM_CFLAGS="$AM_CFLAGS -DHAVE_ECC -DTFM_ECC256"
+    AM_CFLAGS="$AM_CFLAGS -DHAVE_ECC"
+
     if test "$ENABLED_ECC_SHAMIR" = "yes" && test "$ENABLED_LOWRESOURCE" = "no"
     then
         AM_CFLAGS="$AM_CFLAGS -DECC_SHAMIR"
@@ -4282,9 +4334,14 @@ then
         AM_CFLAGS="$AM_CFLAGS -DWC_ECC_NONBLOCK"
     fi
 
-    if test "$ENABLED_LOWRESOURCE" = "yes" && test "$ENABLED_FASTMATH" = "yes"
+    if test "$ENABLED_FASTMATH" = "yes"
     then
-        AM_CFLAGS="$AM_CFLAGS -DALT_ECC_SIZE"
+        if test "$ENABLED_LOWRESOURCE" = "yes"
+        then
+            AM_CFLAGS="$AM_CFLAGS -DALT_ECC_SIZE"
+        else
+            AM_CFLAGS="$AM_CFLAGS -DTFM_ECC256"
+        fi
     fi
 
     ENABLED_CERTS=yes
@@ -5387,6 +5444,22 @@ AC_ARG_ENABLE([xts],
     [AS_HELP_STRING([--enable-xts],[Please use --enable-aesxts])],
     [ ENABLED_AESXTS=$enableval ]
     )
+
+# AES-CTS
+AC_ARG_ENABLE([aescts],
+    [AS_HELP_STRING([--enable-aescts],[Enable AES CTS (default: disabled)])],
+    [ ENABLED_AESCTS=$enableval ],
+    [ ENABLED_AESCTS=no ]
+    )
+
+if test "$ENABLED_AESCTS" = "yes"
+then
+    if test "$ENABLED_AESCBC" = "no"
+    then
+        AC_MSG_ERROR([AES CTS requires AES CBC.])
+    fi
+    AM_CFLAGS="$AM_CFLAGS -DWOLFSSL_AES_CTS"
+fi
 
 # Web Server Build
 AC_ARG_ENABLE([webserver],
@@ -9314,13 +9387,13 @@ fi
 AC_ARG_ENABLE([linuxkm-lkcapi-register],
     [AS_HELP_STRING([--enable-linuxkm-lkcapi-register],[Register wolfCrypt implementations with the Linux Kernel Crypto API backplane.  Possible values are "none", "all", "cbc(aes)", "cfb(aes)", "gcm(aes)", and "xts(aes)", or a comma-separate combination. (default: none)])],
     [ENABLED_LINUXKM_LKCAPI_REGISTER=$enableval],
-    [ENABLED_LINUXKM_LKCAPI_REGISTER=none]
+    [ENABLED_LINUXKM_LKCAPI_REGISTER=no]
     )
-if test "$ENABLED_LINUXKM_LKCAPI_REGISTER" != "none"
+if test "$ENABLED_LINUXKM_LKCAPI_REGISTER" != "no"
 then
     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER"
 
-    if test "$ENABLED_AESGCM" != "no" && test "$ENABLED_AESGCM_STREAM" = "no" && test "$ENABLED_FIPS" = "no"; then
+    if test "$ENABLED_AESGCM" != "no" && test "$ENABLED_AESGCM_STREAM" = "no" && test "$enable_aesgcm_stream" != "no" && (test "$ENABLED_FIPS" = "no" || test $HAVE_FIPS_VERSION -ge 6); then
         ENABLED_AESGCM_STREAM=yes
     fi
 
@@ -9332,21 +9405,66 @@ then
     for lkcapi_alg in $(echo "$ENABLED_LINUXKM_LKCAPI_REGISTER" | tr ',' ' ')
     do
         case "$lkcapi_alg" in
-        all) AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_ALL"           ;;
+        all) AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_ALL -DWC_RSA_NO_PADDING" ;;
         'cbc(aes)') test "$ENABLED_AESCBC" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: AES-CBC implementation not enabled.])
                     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESCBC" ;;
         'cfb(aes)') test "$ENABLED_AESCFB" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: AES-CFB implementation not enabled.])
                     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESCFB" ;;
         'gcm(aes)') test "$ENABLED_AESGCM" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: AES-GCM implementation not enabled.])
-                    test "$ENABLED_AESGCM_STREAM" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: --enable-aesgcm-stream is required for LKCAPI.])
                     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESGCM" ;;
+        'rfc4106(gcm(aes))') test "$ENABLED_AESGCM" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: AES-GCM implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESGCM_RFC4106" ;;
         'xts(aes)') test "$ENABLED_AESXTS" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: AES-XTS implementation not enabled.])
                     test "$ENABLED_AESXTS_STREAM" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: --enable-aesxts-stream is required for LKCAPI.])
                     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESXTS" ;;
+        'ctr(aes)') test "$ENABLED_AESCTR" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: AES-CTR implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESCTR" ;;
+        'ofb(aes)') test "$ENABLED_AESOFB" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: AES-OFB implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESOFB" ;;
+        'ecb(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_AESECB -DHAVE_AES_ECB" ;;
+        'sha1')     test "$ENABLED_SHA" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: SHA-1 implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_SHA1" ;;
+        'sha2')     test "$ENABLED_SHA224" != "no" || test "$ENABLED_SHA256" != "no" || test "$ENABLED_SHA384" != "no" || test "$ENABLED_SHA512" != "no" || \
+                    AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: No SHA-2 implementations are enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_SHA2" ;;
+        'sha3')     test "$ENABLED_SHA3" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: SHA-3 implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_SHA3" ;;
+        'hmac(sha1)')     test "$ENABLED_SHA" != "no" && test "$ENABLED_HMAC" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: SHA-1 HMAC implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_SHA1_HMAC" ;;
+        'hmac(sha2)') (test "$ENABLED_SHA224" != "no" || test "$ENABLED_SHA256" != "no" || test "$ENABLED_SHA384" != "no" || test "$ENABLED_SHA512" != "no") && \
+                    test "$ENABLED_HMAC" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: No SHA-2 HMAC implementations are enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_SHA2_HMAC" ;;
+        'hmac(sha3)') test "$ENABLED_SHA3" != "no" && test "$ENABLED_HMAC" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: SHA-3 HMAC implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_SHA3_HMAC" ;;
+        'ecdsa')    test "$ENABLED_ECC" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: ECDSA implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_ECDSA" ;;
+        'ecdh')     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_ECDH" ;;
+        'rsa')      test "$ENABLED_RSA" != "no" || AC_MSG_ERROR([linuxkm-lkcapi-register ${lkcapi_alg}: RSA implementation not enabled.])
+                    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_REGISTER_RSA -DWC_RSA_NO_PADDING" ;;
+        # disable options
+        '-cbc(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESCBC" ;;
+        '-cfb(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESCFB" ;;
+        '-gcm(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESGCM" ;;
+        '-rfc4106(gcm(aes))')
+                     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESGCM_RFC4106" ;;
+        '-xts(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESXTS" ;;
+        '-ctr(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESCTR" ;;
+        '-ofb(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESOFB" ;;
+        '-ecb(aes)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_AESECB" ;;
+        '-sha1')     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_SHA1" ;;
+        '-sha2')     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_SHA2" ;;
+        '-sha3')     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_SHA3" ;;
+        '-hmac(sha1)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_SHA1_HMAC" ;;
+        '-hmac(sha2)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_SHA2_HMAC" ;;
+        '-hmac(sha3)') AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_SHA3_HMAC" ;;
+        '-ecdsa')    AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_ECDSA" ;;
+        '-ecdh')     AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_ECDH" ;;
+        '-rsa')      AM_CFLAGS="$AM_CFLAGS -DLINUXKM_LKCAPI_DONT_REGISTER_RSA" ;;
         *) AC_MSG_ERROR([Unsupported LKCAPI algorithm "$lkcapi_alg".])      ;;
         esac
     done
 fi
+AC_SUBST([ENABLED_LINUXKM_LKCAPI_REGISTER])
 
 # Library Suffix
 LIBSUFFIX=""
@@ -10623,7 +10741,7 @@ rm -f $OPTION_FILE
 echo "/* wolfssl options.h" > $OPTION_FILE
 echo " * generated from configure options" >> $OPTION_FILE
 echo " *" >> $OPTION_FILE
-echo " * Copyright (C) 2006-2024 wolfSSL Inc." >> $OPTION_FILE
+echo " * Copyright (C) 2006-2025 wolfSSL Inc." >> $OPTION_FILE
 echo " *" >> $OPTION_FILE
 echo " * This file is part of wolfSSL. (formerly known as CyaSSL)" >> $OPTION_FILE
 echo " *" >> $OPTION_FILE
@@ -10821,6 +10939,7 @@ echo "   * snifftest:                  $ENABLED_SNIFFTEST"
 echo "   * ARC4:                       $ENABLED_ARC4"
 echo "   * AES:                        $ENABLED_AES"
 echo "   * AES-NI:                     $ENABLED_AESNI"
+echo "   * AVX for AES:                $ENABLED_AESNI_WITH_AVX"
 echo "   * AES-CBC:                    $ENABLED_AESCBC"
 echo "   * AES-CBC length checks:      $ENABLED_AESCBC_LENGTH_CHECKS"
 echo "   * AES-GCM:                    $ENABLED_AESGCM"

@@ -25,10 +25,7 @@
  *       thumb2 ../wolfssl/wolfcrypt/src/port/arm/thumb2-aes-asm.S
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
 
 #ifdef WOLFSSL_ARMASM
 #ifdef WOLFSSL_ARMASM_THUMB2
@@ -2290,12 +2287,12 @@ L_AES_ECB_decrypt_end:
 	.type	AES_CBC_decrypt, %function
 AES_CBC_decrypt:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	LDR	r8, [sp, #36]
-	LDR	r4, [sp, #40]
 	MOV	lr, r0
 	LDR	r0, L_AES_Thumb2_td_ecb
 	MOV	r12, r2
 	ADR	r2, L_AES_Thumb2_td4
+	LDR	r8, [sp, #36]
+	LDR	r4, [sp, #40]
 	PUSH	{r3, r4}
 	CMP	r8, #0xa
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)

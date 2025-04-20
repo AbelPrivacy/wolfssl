@@ -323,6 +323,7 @@
 #include <tests/api/test_dtls.h>
 #include <tests/api/test_ocsp.h>
 #include <tests/api/test_evp.h>
+#include <tests/api/test_tls_ext.h>
 
 #if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_TLS) && \
     !defined(NO_RSA)        && !defined(SINGLE_THREADED) && \
@@ -2311,6 +2312,10 @@ static int test_wolfSSL_CTX_use_PrivateKey_file(void)
                                                          WOLFSSL_FILETYPE_PEM));
     /* invalid key type */
     ExpectFalse(wolfSSL_CTX_use_PrivateKey_file(ctx, svrKeyFile, 9999));
+
+    /* invalid key format */
+    ExpectFalse(wolfSSL_CTX_use_PrivateKey_file(ctx, "./certs/dh-priv-2048.pem",
+                                                         WOLFSSL_FILETYPE_PEM));
 
     /* success */
 #ifdef NO_RSA
@@ -4908,6 +4913,7 @@ static int test_wolfSSL_FPKI(void)
 #if defined(WOLFSSL_FPKI) && !defined(NO_RSA) && !defined(NO_FILESYSTEM)
     XFILE f = XBADFILE;
     const char* fpkiCert = "./certs/fpki-cert.der";
+    const char* fpkiCertPolCert = "./certs/fpki-certpol-cert.der";
     DecodedCert cert;
     byte buf[4096];
     byte* uuid = NULL;
@@ -4917,6 +4923,31 @@ static int test_wolfSSL_FPKI(void)
     int bytes = 0;
 
     ExpectTrue((f = XFOPEN(fpkiCert, "rb")) != XBADFILE);
+    ExpectIntGT(bytes = (int)XFREAD(buf, 1, sizeof(buf), f), 0);
+    if (f != XBADFILE)
+        XFCLOSE(f);
+
+    wc_InitDecodedCert(&cert, buf, (word32)bytes, NULL);
+    ExpectIntEQ(wc_ParseCert(&cert, CERT_TYPE, 0, NULL), 0);
+    ExpectIntEQ(wc_GetFASCNFromCert(&cert, NULL, &fascnSz), WC_NO_ERR_TRACE(LENGTH_ONLY_E));
+    ExpectNotNull(fascn = (byte*)XMALLOC(fascnSz, NULL,
+        DYNAMIC_TYPE_TMP_BUFFER));
+    ExpectIntEQ(wc_GetFASCNFromCert(&cert, fascn, &fascnSz), 0);
+    XFREE(fascn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    fascn = NULL;
+
+    ExpectIntEQ(wc_GetUUIDFromCert(&cert, NULL, &uuidSz), WC_NO_ERR_TRACE(LENGTH_ONLY_E));
+    ExpectNotNull(uuid = (byte*)XMALLOC(uuidSz, NULL, DYNAMIC_TYPE_TMP_BUFFER));
+    ExpectIntEQ(wc_GetUUIDFromCert(&cert, uuid, &uuidSz), 0);
+    XFREE(uuid, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    uuid = NULL;
+    wc_FreeDecodedCert(&cert);
+
+    XMEMSET(buf, 0, 4096);
+    fascnSz = uuidSz = bytes = 0;
+    f = XBADFILE;
+
+    ExpectTrue((f = XFOPEN(fpkiCertPolCert, "rb")) != XBADFILE);
     ExpectIntGT(bytes = (int)XFREAD(buf, 1, sizeof(buf), f), 0);
     if (f != XBADFILE)
         XFCLOSE(f);
@@ -6566,8 +6597,7 @@ static int test_wolfSSL_EVP_PKEY_print_public(void)
     ExpectIntEQ(EVP_PKEY_print_public(wbio, pkey,0,NULL),1);
 
     ExpectIntGT(BIO_gets(wbio, line, sizeof(line)), 0);
-    strcpy(line1, "Public-Key: (256 bit)\n");
-    ExpectIntEQ(XSTRNCMP( line, line1, XSTRLEN(line1)), 0);
+    ExpectStrEQ(line, "Public-Key: (256 bit)\n");
 
     ExpectIntGT(BIO_gets(wbio, line, sizeof(line)), 0);
     strcpy(line1, "pub:\n");
@@ -12834,31 +12864,6 @@ static int test_wolfSSL_set_alpn_protos(void)
 
 #endif /* HAVE_ALPN_PROTOS_SUPPORT */
 
-static int test_wolfSSL_DisableExtendedMasterSecret(void)
-{
-    EXPECT_DECLS;
-#if defined(HAVE_EXTENDED_MASTER) && !defined(NO_WOLFSSL_CLIENT) && \
-    !defined(NO_TLS)
-    WOLFSSL_CTX *ctx = wolfSSL_CTX_new(wolfSSLv23_client_method());
-    WOLFSSL     *ssl = wolfSSL_new(ctx);
-
-    ExpectNotNull(ctx);
-    ExpectNotNull(ssl);
-
-    /* error cases */
-    ExpectIntNE(WOLFSSL_SUCCESS, wolfSSL_CTX_DisableExtendedMasterSecret(NULL));
-    ExpectIntNE(WOLFSSL_SUCCESS, wolfSSL_DisableExtendedMasterSecret(NULL));
-
-    /* success cases */
-    ExpectIntEQ(WOLFSSL_SUCCESS, wolfSSL_CTX_DisableExtendedMasterSecret(ctx));
-    ExpectIntEQ(WOLFSSL_SUCCESS, wolfSSL_DisableExtendedMasterSecret(ssl));
-
-    wolfSSL_free(ssl);
-    wolfSSL_CTX_free(ctx);
-#endif
-    return EXPECT_RESULT();
-}
-
 static int test_wolfSSL_wolfSSL_UseSecureRenegotiation(void)
 {
     EXPECT_DECLS;
@@ -15601,6 +15606,7 @@ typedef struct encodeSignedDataStream {
     byte out[FOURK_BUF*3];
     int  idx;
     word32 outIdx;
+    word32 chunkSz; /* max amount of data to be returned */
 } encodeSignedDataStream;
 
 
@@ -15611,8 +15617,8 @@ static int GetContentCB(PKCS7* pkcs7, byte** content, void* ctx)
     encodeSignedDataStream* strm = (encodeSignedDataStream*)ctx;
 
     if (strm->outIdx  < pkcs7->contentSz) {
-        ret = (pkcs7->contentSz > strm->outIdx + FOURK_BUF)?
-                FOURK_BUF : pkcs7->contentSz - strm->outIdx;
+        ret = (pkcs7->contentSz > strm->outIdx + strm->chunkSz)?
+                strm->chunkSz : pkcs7->contentSz - strm->outIdx;
         *content = strm->out + strm->outIdx;
         strm->outIdx += ret;
     }
@@ -15763,8 +15769,14 @@ static int test_wc_PKCS7_EncodeSignedData(void)
 
     /* reinitialize and test setting stream mode */
     {
-        int signedSz = 0;
+        int signedSz = 0, i;
         encodeSignedDataStream strm;
+        static const int numberOfChunkSizes = 4;
+        static const word32 chunkSizes[] = { 4080, 4096, 5000, 9999 };
+        /* chunkSizes were chosen to test around the default 4096 octet string
+         * size used in pkcs7.c */
+
+        XMEMSET(&strm, 0, sizeof(strm));
 
         ExpectNotNull(pkcs7 = wc_PKCS7_New(HEAP_HINT, testDevId));
         ExpectIntEQ(wc_PKCS7_Init(pkcs7, HEAP_HINT, INVALID_DEVID), 0);
@@ -15799,41 +15811,50 @@ static int test_wc_PKCS7_EncodeSignedData(void)
         ExpectIntEQ(wc_PKCS7_InitWithCert(pkcs7, NULL, 0), 0);
 
         /* use exact signed buffer size since BER encoded */
-        ExpectIntEQ(wc_PKCS7_VerifySignedData(pkcs7, output, (word32)signedSz),
-            0);
+        ExpectIntEQ(wc_PKCS7_VerifySignedData(pkcs7, output,
+            (word32)signedSz), 0);
         wc_PKCS7_Free(pkcs7);
 
         /* now try with using callbacks for IO */
-        ExpectNotNull(pkcs7 = wc_PKCS7_New(HEAP_HINT, testDevId));
-        ExpectIntEQ(wc_PKCS7_Init(pkcs7, HEAP_HINT, INVALID_DEVID), 0);
+        for (i = 0; i < numberOfChunkSizes; i++) {
+            strm.idx    = 0;
+            strm.outIdx = 0;
+            strm.chunkSz = chunkSizes[i];
 
-        ExpectIntEQ(wc_PKCS7_InitWithCert(pkcs7, cert, certSz), 0);
+            ExpectNotNull(pkcs7 = wc_PKCS7_New(HEAP_HINT, testDevId));
+            ExpectIntEQ(wc_PKCS7_Init(pkcs7, HEAP_HINT, INVALID_DEVID), 0);
 
-        if (pkcs7 != NULL) {
-            pkcs7->contentSz  = FOURK_BUF*2;
-            pkcs7->privateKey = key;
-            pkcs7->privateKeySz = (word32)sizeof(key);
-            pkcs7->encryptOID = encryptOid;
-        #ifdef NO_SHA
-            pkcs7->hashOID = SHA256h;
-        #else
-            pkcs7->hashOID = SHAh;
-        #endif
-            pkcs7->rng = &rng;
+            ExpectIntEQ(wc_PKCS7_InitWithCert(pkcs7, cert, certSz), 0);
+
+            if (pkcs7 != NULL) {
+                pkcs7->contentSz  = 10000;
+                pkcs7->privateKey = key;
+                pkcs7->privateKeySz = (word32)sizeof(key);
+                pkcs7->encryptOID = encryptOid;
+            #ifdef NO_SHA
+                pkcs7->hashOID = SHA256h;
+            #else
+                pkcs7->hashOID = SHAh;
+            #endif
+                pkcs7->rng = &rng;
+            }
+            ExpectIntEQ(wc_PKCS7_SetStreamMode(pkcs7, 1, GetContentCB,
+                StreamOutputCB, (void*)&strm), 0);
+
+            ExpectIntGT(signedSz = wc_PKCS7_EncodeSignedData(pkcs7, NULL, 0),
+                0);
+            wc_PKCS7_Free(pkcs7);
+            pkcs7 = NULL;
+
+            ExpectNotNull(pkcs7 = wc_PKCS7_New(HEAP_HINT, testDevId));
+            ExpectIntEQ(wc_PKCS7_InitWithCert(pkcs7, NULL, 0), 0);
+
+            /* use exact signed buffer size since BER encoded */
+            ExpectIntEQ(wc_PKCS7_VerifySignedData(pkcs7, strm.out,
+                (word32)signedSz), 0);
+            wc_PKCS7_Free(pkcs7);
+            pkcs7 = NULL;
         }
-        XMEMSET(&strm, 0, sizeof(strm));
-        ExpectIntEQ(wc_PKCS7_SetStreamMode(pkcs7, 1, GetContentCB,
-            StreamOutputCB, (void*)&strm), 0);
-
-        ExpectIntGT(signedSz = wc_PKCS7_EncodeSignedData(pkcs7, NULL, 0), 0);
-        wc_PKCS7_Free(pkcs7);
-        pkcs7 = NULL;
-
-        ExpectNotNull(pkcs7 = wc_PKCS7_New(HEAP_HINT, testDevId));
-        ExpectIntEQ(wc_PKCS7_InitWithCert(pkcs7, NULL, 0), 0);
-
-        /* use exact signed buffer size since BER encoded */
-        ExpectIntEQ(wc_PKCS7_VerifySignedData(pkcs7, strm.out, (word32)signedSz), 0);
     }
 #endif
 #ifndef NO_PKCS7_STREAM
@@ -17507,6 +17528,7 @@ static int test_wc_PKCS7_EncodeDecodeEnvelopedData(void)
 
         if (i == 0) {
             XMEMSET(&strm, 0, sizeof(strm));
+            strm.chunkSz = FOURK_BUF;
             ExpectIntEQ(wc_PKCS7_SetStreamMode(pkcs7, 1, GetContentCB,
                 StreamOutputCB, (void*)&strm), 0);
             encodedSz = wc_PKCS7_EncodeEnvelopedData(pkcs7, NULL, 0);
@@ -22039,7 +22061,7 @@ static int test_wolfSSL_X509_INFO_multiple_info(void)
         ExpectNotNull(info = sk_X509_INFO_value(info_stack, i));
         ExpectNotNull(info->x509);
         ExpectNull(info->crl);
-        if (i != 0) {
+        if (i != 2) {
             ExpectNotNull(info->x_pkey);
             ExpectIntEQ(X509_check_private_key(info->x509,
                                                info->x_pkey->dec_pkey), 1);
@@ -25355,7 +25377,7 @@ static int test_hmac_signing(const WOLFSSL_EVP_MD *type, const byte* testKey,
 {
     EXPECT_DECLS;
     unsigned char check[WC_MAX_DIGEST_SIZE];
-    size_t checkSz = -1;
+    size_t checkSz = 0;
     WOLFSSL_EVP_PKEY* key = NULL;
     WOLFSSL_EVP_MD_CTX mdCtx;
 
@@ -25365,8 +25387,10 @@ static int test_hmac_signing(const WOLFSSL_EVP_MD *type, const byte* testKey,
     ExpectIntEQ(wolfSSL_EVP_DigestSignInit(&mdCtx, NULL, type, NULL, key), 1);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData,
                                                   (unsigned int)testDataSz), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, NULL, &checkSz), 1);
     ExpectIntEQ((int)checkSz, (int)testResultSz);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ExpectIntEQ((int)checkSz,(int)testResultSz);
     ExpectIntEQ(XMEMCMP(testResult, check, testResultSz), 0);
@@ -25381,12 +25405,15 @@ static int test_hmac_signing(const WOLFSSL_EVP_MD *type, const byte* testKey,
     wolfSSL_EVP_MD_CTX_init(&mdCtx);
     ExpectIntEQ(wolfSSL_EVP_DigestSignInit(&mdCtx, NULL, type, NULL, key), 1);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData, 4), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, NULL, &checkSz), 1);
     ExpectIntEQ((int)checkSz, (int)testResultSz);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ExpectIntEQ((int)checkSz,(int)testResultSz);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData + 4,
                                               (unsigned int)testDataSz - 4), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ExpectIntEQ((int)checkSz,(int)testResultSz);
     ExpectIntEQ(XMEMCMP(testResult, check, testResultSz), 0);
@@ -25589,8 +25616,10 @@ static int test_wolfSSL_EVP_MD_rsa_signing(void)
                                                              NULL, privKey), 1);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData,
                                           (unsigned int)XSTRLEN(testData)), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, NULL, &checkSz), 1);
     ExpectIntEQ((int)checkSz, sz);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ExpectIntEQ((int)checkSz,sz);
     ExpectIntEQ(wolfSSL_EVP_MD_CTX_copy_ex(&mdCtxCopy, &mdCtx), 1);
@@ -25614,12 +25643,15 @@ static int test_wolfSSL_EVP_MD_rsa_signing(void)
     ExpectIntEQ(wolfSSL_EVP_DigestSignInit(&mdCtx, NULL, wolfSSL_EVP_sha256(),
                                                              NULL, privKey), 1);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData, 4), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, NULL, &checkSz), 1);
     ExpectIntEQ((int)checkSz, sz);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ExpectIntEQ((int)checkSz, sz);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData + 4,
                                       (unsigned int)XSTRLEN(testData) - 4), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ExpectIntEQ((int)checkSz, sz);
     ret = wolfSSL_EVP_MD_CTX_cleanup(&mdCtx);
@@ -25645,8 +25677,10 @@ static int test_wolfSSL_EVP_MD_rsa_signing(void)
                 paddings[i]), 1);
         ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData,
                 (unsigned int)XSTRLEN(testData)), 1);
+        checkSz = sizeof(check);
         ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, NULL, &checkSz), 1);
         ExpectIntEQ((int)checkSz, sz);
+        checkSz = sizeof(check);
         ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
         ExpectIntEQ((int)checkSz,sz);
         ret = wolfSSL_EVP_MD_CTX_cleanup(&mdCtx);
@@ -25680,10 +25714,12 @@ static int test_wolfSSL_EVP_MD_ecc_signing(void)
     const char testData[] = "Hi There";
     WOLFSSL_EVP_MD_CTX mdCtx;
     int ret;
-    size_t checkSz = -1;
     const unsigned char* cp;
     const unsigned char* p;
     unsigned char check[2048/8];
+    size_t checkSz = sizeof(check);
+
+    XMEMSET(check, 0, sizeof(check));
 
     cp = ecc_clikey_der_256;
     ExpectNotNull(privKey = wolfSSL_d2i_PrivateKey(EVP_PKEY_EC, NULL, &cp,
@@ -25697,7 +25733,9 @@ static int test_wolfSSL_EVP_MD_ecc_signing(void)
                                                              NULL, privKey), 1);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData,
                                           (unsigned int)XSTRLEN(testData)), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, NULL, &checkSz), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ret = wolfSSL_EVP_MD_CTX_cleanup(&mdCtx);
     ExpectIntEQ(ret, 1);
@@ -25716,10 +25754,13 @@ static int test_wolfSSL_EVP_MD_ecc_signing(void)
     ExpectIntEQ(wolfSSL_EVP_DigestSignInit(&mdCtx, NULL, wolfSSL_EVP_sha256(),
                                                              NULL, privKey), 1);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData, 4), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, NULL, &checkSz), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ExpectIntEQ(wolfSSL_EVP_DigestSignUpdate(&mdCtx, testData + 4,
                                       (unsigned int)XSTRLEN(testData) - 4), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(wolfSSL_EVP_DigestSignFinal(&mdCtx, check, &checkSz), 1);
     ret = wolfSSL_EVP_MD_CTX_cleanup(&mdCtx);
     ExpectIntEQ(ret, 1);
@@ -25811,7 +25852,7 @@ static int test_wolfSSL_CTX_add_extra_chain_cert(void)
         pkey = X509_get_pubkey(ecX509);
         ExpectNotNull(pkey);
         /* current ECC key is 256 bit (32 bytes) */
-        ExpectIntEQ(EVP_PKEY_size(pkey), 32);
+        ExpectIntGE(EVP_PKEY_size(pkey), 72);
 
         X509_free(ecX509);
         ecX509 = NULL;
@@ -28616,7 +28657,7 @@ static int test_X509_STORE_get0_objects(void)
 #endif
     ExpectNotNull(objsCopy = sk_X509_OBJECT_deep_copy(objs, NULL, NULL));
     ExpectIntEQ(sk_X509_OBJECT_num(objs), sk_X509_OBJECT_num(objsCopy));
-    for (i = 0; i < sk_X509_OBJECT_num(objs); i++) {
+    for (i = 0; i < sk_X509_OBJECT_num(objs) && EXPECT_SUCCESS(); i++) {
         obj = (X509_OBJECT*)sk_X509_OBJECT_value(objs, i);
     #ifdef HAVE_CRL
         objCopy = (X509_OBJECT*)sk_X509_OBJECT_value(objsCopy, i);
@@ -33009,6 +33050,21 @@ static int test_wolfSSL_PKCS8_d2i(void)
     evpPkey = NULL;
     BIO_free(bio);
     bio = NULL;
+
+    /* https://github.com/wolfSSL/wolfssl/issues/8610 */
+    bytes = (int)XSTRLEN((char *)pkcs8_buffer);
+    ExpectNotNull(bio = BIO_new_mem_buf((void*)pkcs8_buffer, bytes));
+    ExpectIntEQ(BIO_get_mem_data(bio, &p), bytes);
+    ExpectIntEQ(XMEMCMP(p, pkcs8_buffer, bytes), 0);
+
+    ExpectNotNull(evpPkey = PEM_read_bio_PrivateKey(bio, NULL, NULL,
+            (void*)"yassl123"));
+    ExpectIntEQ(PEM_write_PKCS8PrivateKey(stderr, evpPkey, NULL,
+            NULL, 0, NULL, NULL), bytes);
+    EVP_PKEY_free(evpPkey);
+    evpPkey = NULL;
+    BIO_free(bio);
+    bio = NULL;
 #endif /* OPENSSL_ALL && !NO_BIO && !NO_PWDBASED && HAVE_PKCS8 && HAVE_AES_CBC */
     EVP_PKEY_free(pkey);
     pkey = NULL;
@@ -36178,7 +36234,7 @@ static int test_GENERAL_NAME_set0_othername(void)
     ExpectNotNull(gns = (GENERAL_NAMES*)X509_get_ext_d2i(x509,
         NID_subject_alt_name, NULL, NULL));
 
-    ExpectIntEQ(sk_GENERAL_NAME_num(NULL), WOLFSSL_FATAL_ERROR);
+    ExpectIntEQ(sk_GENERAL_NAME_num(NULL), 0);
     ExpectIntEQ(sk_GENERAL_NAME_num(gns), 3);
 
     ExpectNull(sk_GENERAL_NAME_value(NULL, 0));
@@ -37546,7 +37602,7 @@ static int test_wolfSSL_BIO_f_md(void)
         0xA4, 0x95, 0x99, 0x1B, 0x78, 0x52, 0xB8, 0x55
     };
     unsigned char check[sizeof(testResult) + 1];
-    size_t checkSz = -1;
+    size_t checkSz = sizeof(check);
     EVP_PKEY* key = NULL;
 
     XMEMSET(out, 0, sizeof(out));
@@ -37599,7 +37655,9 @@ static int test_wolfSSL_BIO_f_md(void)
     EVP_DigestSignInit(ctx, NULL, EVP_sha256(), NULL, key);
     ExpectNotNull(bio = BIO_push(bio, mem));
     BIO_write(bio, testData, (int)strlen(testData));
+    checkSz = sizeof(check);
     ExpectIntEQ(EVP_DigestSignFinal(ctx, NULL, &checkSz), 1);
+    checkSz = sizeof(check);
     ExpectIntEQ(EVP_DigestSignFinal(ctx, check, &checkSz), 1);
 
     ExpectIntEQ(XMEMCMP(check, testResult, sizeof(testResult)), 0);
@@ -40877,7 +40935,7 @@ static int test_wolfSSL_CTX_ctrl(void)
 #endif
         ExpectNotNull(pkey = X509_get_pubkey(ecX509));
         /* current ECC key is 256 bit (32 bytes) */
-        ExpectIntEQ(EVP_PKEY_size(pkey), 32);
+        ExpectIntGE(EVP_PKEY_size(pkey), 72);
 
         X509_free(ecX509);
         EVP_PKEY_free(pkey);
@@ -42548,7 +42606,7 @@ static int test_wolfSSL_TXT_DB(void)
 
     /* Test index */
     ExpectIntEQ(TXT_DB_create_index(db, 3, NULL,
-        (wolf_sk_hash_cb)(long unsigned int)TXT_DB_hash,
+        (wolf_sk_hash_cb)(wc_ptr_t)TXT_DB_hash,
         (wolf_lh_compare_cb)TXT_DB_cmp), 1);
     ExpectNotNull(TXT_DB_get_by_index(db, 3, (WOLFSSL_STRING*)fields));
     fields[3] = "12DA";
@@ -46167,8 +46225,8 @@ static int test_sk_X509(void)
         sk_X509_push(s, &x2);
         ExpectIntEQ(sk_X509_num(s), 2);
         ExpectNull(sk_X509_value(s, 2));
-        ExpectIntEQ((sk_X509_value(s, 0) == &x2), 1);
-        ExpectIntEQ((sk_X509_value(s, 1) == &x1), 1);
+        ExpectIntEQ((sk_X509_value(s, 0) == &x1), 1);
+        ExpectIntEQ((sk_X509_value(s, 1) == &x2), 1);
         sk_X509_push(s, &x2);
 
         sk_X509_pop_free(s, free_x509);
@@ -46193,20 +46251,20 @@ static int test_sk_X509(void)
         for (i = 0; i < len; ++i) {
             sk_X509_push(s, xList[i]);
             ExpectIntEQ(sk_X509_num(s), i + 1);
-            ExpectIntEQ((sk_X509_value(s, 0) == xList[i]), 1);
-            ExpectIntEQ((sk_X509_value(s, i) == xList[0]), 1);
+            ExpectIntEQ((sk_X509_value(s, 0) == xList[0]), 1);
+            ExpectIntEQ((sk_X509_value(s, i) == xList[i]), 1);
         }
 
-        /* pop returns and removes last pushed on stack, which is index 0
+        /* pop returns and removes last pushed on stack, which is the last index
          * in sk_x509_value */
-        for (i = 0; i < len; ++i) {
-            X509 * x = sk_X509_value(s, 0);
+        for (i = len-1; i >= 0; --i) {
+            X509 * x = sk_X509_value(s, i);
             X509 * y = sk_X509_pop(s);
-            X509 * z = xList[len - 1 - i];
+            X509 * z = xList[i];
 
-            ExpectIntEQ((x == y), 1);
-            ExpectIntEQ((x == z), 1);
-            ExpectIntEQ(sk_X509_num(s), len - 1 - i);
+            ExpectPtrEq(x, y);
+            ExpectPtrEq(x, z);
+            ExpectIntEQ(sk_X509_num(s), i);
         }
 
         sk_free(s);
@@ -46218,14 +46276,14 @@ static int test_sk_X509(void)
         for (i = 0; i < len; ++i) {
             sk_X509_push(s, xList[i]);
             ExpectIntEQ(sk_X509_num(s), i + 1);
-            ExpectIntEQ((sk_X509_value(s, 0) == xList[i]), 1);
-            ExpectIntEQ((sk_X509_value(s, i) == xList[0]), 1);
+            ExpectIntEQ((sk_X509_value(s, 0) == xList[0]), 1);
+            ExpectIntEQ((sk_X509_value(s, i) == xList[i]), 1);
         }
 
         /* shift returns and removes first pushed on stack, which is index i
          * in sk_x509_value() */
         for (i = 0; i < len; ++i) {
-            X509 * x = sk_X509_value(s, len - 1 - i);
+            X509 * x = sk_X509_value(s, 0);
             X509 * y = sk_X509_shift(s);
             X509 * z = xList[i];
 
@@ -47849,6 +47907,12 @@ static int test_tls13_apis(void)
 #elif defined(HAVE_ECC)
     const char*  ourCert = eccCertFile;
     const char*  ourKey  = eccKeyFile;
+#elif defined(HAVE_ED25519)
+    const char*  ourCert = edCertFile;
+    const char*  ourKey  = edKeyFile;
+#elif defined(HAVE_ED448)
+    const char*  ourCert = ed448CertFile;
+    const char*  ourKey  = ed448KeyFile;
 #endif
 #endif
 #endif
@@ -67618,6 +67682,7 @@ TEST_CASE testCases[] = {
     /* Uses Assert in handshake callback. */
     TEST_DECL(test_wolfSSL_set_alpn_protos),
 #endif
+    TEST_DECL(test_tls_ems_downgrade),
     TEST_DECL(test_wolfSSL_DisableExtendedMasterSecret),
     TEST_DECL(test_wolfSSL_wolfSSL_UseSecureRenegotiation),
     TEST_DECL(test_wolfSSL_SCR_Reconnect),
@@ -67766,6 +67831,8 @@ TEST_CASE testCases[] = {
     TEST_DECL(test_wolfSSL_SSLDisableRead),
     TEST_DECL(test_wolfSSL_inject),
     TEST_DECL(test_wolfSSL_dtls_cid_parse),
+    TEST_DECL(test_dtls13_epochs),
+    TEST_DECL(test_dtls13_ack_order),
     TEST_DECL(test_ocsp_status_callback),
     TEST_DECL(test_ocsp_basic_verify),
     TEST_DECL(test_ocsp_response_parsing),
